@@ -285,8 +285,15 @@ def cmd_beatmatch(a):
     speed = speed or 1.0
     inp = inp or 0.0
     span = s["dur"] * speed
-    if inp + span > raw_info["duration"] + 1e-3:
-        print(f"warning: needs {inp + span:.2f}s of source, raw clip is {raw_info['duration']:.2f}s - tail will freeze", file=sys.stderr)
+    # keep one frame of margin so the cut never runs off the end of the raw clip
+    limit = raw_info["duration"] - 1.0 / raw_info["fps"]
+    if inp + span > limit:
+        if span <= limit:
+            new_in = max(0.0, limit - span)
+            print(f"note: in-point moved {inp:.2f}s -> {new_in:.2f}s so the cut fits the raw clip", file=sys.stderr)
+            inp = new_in
+        else:
+            print(f"warning: needs {span:.2f}s of source, raw clip is {raw_info['duration']:.2f}s - raise --speed", file=sys.stderr)
     fps = p["fps"]
     frames = round(s["dur"] * fps)
     out = d / "ours" / f"s{s['id']}_cut.mp4"
