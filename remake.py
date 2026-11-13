@@ -45,7 +45,8 @@ def probe(path):
     if abs(rot) % 180 == 90:
         w, h = h, w
     return {
-        "duration": float(info["format"]["duration"]),
+        # the video stream's length, not the container's: audio often runs a bit longer
+        "duration": min(float(v.get("duration") or info["format"]["duration"]), float(info["format"]["duration"])),
         "fps": round(num / den, 3) if den else 30.0,
         "width": w, "height": h,
         "has_audio": any(s["codec_type"] == "audio" for s in info["streams"]),
@@ -121,6 +122,9 @@ def cmd_breakdown(a):
         run(["ffmpeg", "-v", "error", "-y", "-ss", f"{max(s0, s1 - 2 * frame):.3f}", "-i", str(orig), "-frames:v", "1", "-q:v", "2", str(hs / f"s{sid}_end.jpg")])
         run(["ffmpeg", "-v", "error", "-y", "-ss", f"{s0:.3f}", "-i", str(orig), "-t", f"{s1 - s0:.3f}",
              "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-c:a", "aac", "-movflags", "+faststart", str(hs / f"s{sid}.mp4")])
+        for k in ("start", "end"):
+            if not (hs / f"s{sid}_{k}.jpg").exists():
+                sys.exit(f"could not grab scene {sid} {k} frame")
         # contact sheet: one frame every 0.25s, 4 per row
         n = max(1, int((s1 - s0) / 0.25))
         rows = (n + 3) // 4
@@ -157,13 +161,13 @@ def cmd_breakdown(a):
 def cmd_set(a):
     d, p = load(a.name)
     if a.scene is None:  # project-level fields
-        for k in ("title", "brand", "changes", "model", "mode"):
+        for k in ("title", "brand", "changes", "model", "mode", "caption"):
             v = getattr(a, k, None)
             if v is not None:
                 p[k] = v
     else:
         s = scene(p, a.scene.zfill(2))
-        for k in ("desc", "text", "camera", "status"):
+        for k in ("desc", "text", "camera", "status", "plan"):
             v = getattr(a, k, None)
             if v is not None:
                 s[k] = v
@@ -327,11 +331,16 @@ def cmd_assemble(a):
                     + (f"\n    beat: {s['desc']}" if s["desc"] else ""))
     if p["audio"]:
         shutil.copy2(d / p["audio"], cap / "audio_his.m4a")
+    if p.get("caption"):
+        srt = lambda t: f"{int(t//3600):02d}:{int(t%3600//60):02d}:{int(t%60):02d},{int(round(t%1*1000)):03d}"
+        (cap / "captions.srt").write_text(f"1\n{srt(0)} --> {srt(p['duration'])}\n{p['caption']}\n")
     (cap / "CUES.txt").write_text(
         f"{p['title']}  -  {len(p['scenes'])} scenes, {p['duration']:.2f}s, {W}x{H} @ {fps}fps\n\n"
         "CapCut: new project -> import this folder -> drag 01..NN onto the timeline in order\n"
         "(each file is already his exact scene length, so cuts land on his beats) ->\n"
-        "drop audio_his.m4a under it -> add the text below at the listed times.\n\n"
+        "drop audio_his.m4a under it -> Text > Local captions > Import captions.srt\n"
+        "(editable caption; restyle it to match his).\n\n"
+        + (f"CAPTION (whole video): {p['caption']}\n\n" if p.get("caption") else "")
         + "\n".join(cues) + "\n")
     lst = cap / ".concat.txt"
     lst.write_text("".join(f"file '{x.name}'\n" for x in parts))
@@ -368,6 +377,14 @@ def media(src, kind, label):
     return f'<figure class="m">{el}<figcaption>{label}</figcaption></figure>'
 
 
+def refs_html(d):
+    refs = sorted((d / "refs").glob("*.*")) if (d / "refs").exists() else []
+    if not refs:
+        return ""
+    items = "".join(f'<figure><img src="refs/{html.escape(r.name)}" alt="{html.escape(r.stem)}"><figcaption>{html.escape(r.stem)}</figcaption></figure>' for r in refs)
+    return f'<div class="refs"><span class="side ours">Refs</span>{items}</div>'
+
+
 def build_board(d, p):
     esc = html.escape
     done = sum(1 for s in p["scenes"] if s["ours"]["clip"])
@@ -384,6 +401,7 @@ def build_board(d, p):
   <header><b>Scene {s['id']}</b><span class="tc">{tc(s['start'])} → {tc(s['end'])} · {s['dur']:.2f}s</span>
     <span class="badge" style="--c:{col}">{esc(s['status'].upper())}</span></header>
   <p class="desc">{esc(s['desc']) or '<em>describe the beat: camera, people, action</em>'}</p>
+  {f'<p class="plan"><b>Ours:</b> {esc(s["plan"])}</p>' if s.get('plan') else ''}
   {f'<p class="txt">On-screen: “{esc(s["text"])}”</p>' if s['text'] else ''}
   <div class="row"><span class="side">Theirs<br><small>reference</small></span>
     {media(s['his']['start_frame'], 'img', 'Start frame')}{media(s['his']['end_frame'], 'img', 'End frame')}{media(s['his']['clip'], 'video', 'Clip')}</div>
@@ -391,11 +409,14 @@ def build_board(d, p):
     {media(o['start_frame'], 'img', 'Start frame')}{media(o['end_frame'], 'img', 'End frame')}{media(o['clip'] or o['raw_clip'], 'video', 'Clip')}</div>
   {f'<ul class="att">{attempts}</ul>' if attempts else ''}
 </section>""")
-    page = f"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    page = f"""<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
 <title>{esc(p['title'])} Scene Board</title><style>
-:root{{--bg:#16171b;--card:#1f2026;--line:#2e3038;--fg:#e8e8ea;--mut:#9a9ba3;--acc:#f5b400}}
+/* editing-suite board: one committed dark look */
+:root{{--bg:#17161a;--card:#211f25;--line:#322f37;--fg:#ece9ee;--mut:#a29da8;--acc:#f5b400;--ours:#ff7eb6;color-scheme:dark}}
 *{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}}
-main{{max-width:1100px;margin:0 auto;padding:24px 16px 80px}}
+main{{max-width:1100px;margin:0 auto;padding-block:24px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
+.plan{{margin:0 0 8px;color:var(--ours)}}.plan b{{color:var(--ours)}}
 .kicker{{color:var(--mut);font-size:11px;letter-spacing:.12em;text-transform:uppercase}}
 h1{{margin:4px 0 16px;font-size:30px}}.top{{display:grid;grid-template-columns:1fr auto;gap:20px}}
 .meta span{{margin-right:16px;color:var(--mut)}}.meta b{{color:var(--fg)}}
@@ -407,10 +428,11 @@ figcaption{{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:v
 .badge{{margin-left:auto;border:1px solid var(--c);color:var(--c);font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px}}
 .desc{{margin:6px 0}}.txt{{color:var(--acc);margin:0 0 8px}}
 .row{{display:grid;grid-template-columns:70px repeat(3,1fr);gap:10px;margin-top:10px;align-items:start}}
-.side{{color:var(--mut);font-size:12px}}.side.ours{{color:var(--acc)}}
+.side{{color:var(--mut);font-size:12px}}.side.ours{{color:var(--ours)}}
 .m{{margin:0}}.m img,.m video{{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:8px;background:#000;display:block}}
 .m.empty div{{aspect-ratio:9/16;border:1px dashed var(--line);border-radius:8px;display:grid;place-items:center;text-align:center;color:var(--mut)}}
 .att{{color:var(--mut);font-size:12px;margin:10px 0 0}}
+.refs{{display:flex;gap:10px;align-items:start;flex-wrap:wrap;margin:6px 0 4px}}.refs figure{{margin:0;width:90px}}.refs img{{width:90px;aspect-ratio:3/4;object-fit:cover;border-radius:8px;display:block}}
 .ctl{{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2;display:flex;gap:8px}}
 button{{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}}
 @media(max-width:640px){{.top{{grid-template-columns:1fr}}.row{{grid-template-columns:repeat(3,1fr)}}.side{{grid-column:1/-1}}}}
@@ -426,6 +448,7 @@ button{{background:var(--card);color:var(--fg);border:1px solid var(--line);bord
   <figure><video src="{esc(p['source'])}" muted loop playsinline controls></video><figcaption>Theirs · full</figcaption></figure>
   <figure>{f'<video src="{esc(p["final"])}" muted loop playsinline controls></video>' if p.get('final') else '<div class="ph">Final video lands here</div>'}<figcaption>Ours · final</figcaption></figure>
 </div></div>
+{refs_html(d)}
 <div class="ctl"><button id="play">▶ Play all scenes</button><button id="slow">Slow-mo</button><button id="snd">Sound off</button></div>
 {''.join(rows)}
 </main><script>
@@ -435,7 +458,7 @@ play.onclick=()=>{{playing=!playing;vids().forEach(v=>{{playing?v.play():v.pause
 slow.onclick=()=>{{slow=!slow;vids().forEach(v=>v.playbackRate=slow?.25:1);slow.textContent=slow?'Normal speed':'Slow-mo'}};
 snd.onclick=()=>{{sound=!sound;document.querySelectorAll('video').forEach(v=>v.muted=!sound);snd.textContent=sound?'Sound on':'Sound off'}};
 document.querySelectorAll('.scene').forEach(sc=>sc.querySelectorAll('video').forEach(v=>{{v.onmouseenter=()=>v.play();v.onmouseleave=()=>{{if(!playing)v.pause()}}}}));
-</script></body></html>"""
+</script>"""
     (d / "board.html").write_text(page)
 
 
@@ -461,7 +484,7 @@ def main():
 
     s = sp.add_parser("set", help="record info / our files on the project or a scene")
     s.add_argument("name"); s.add_argument("scene", nargs="?")
-    for k in ("title", "brand", "changes", "model", "mode", "desc", "text", "camera", "status", "attempt"):
+    for k in ("title", "brand", "changes", "model", "mode", "caption", "desc", "text", "camera", "status", "plan", "attempt"):
         s.add_argument(f"--{k}")
     s.add_argument("--start-frame", dest="start_frame"); s.add_argument("--end-frame", dest="end_frame")
     s.add_argument("--raw-clip", dest="raw_clip")
