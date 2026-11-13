@@ -71,7 +71,20 @@ rules (prompts, product rules), but **the user's preferences below override it**
   and spell out the motion piece by piece. If it still snaps, a longer clip (4s) gives it room.
 - **Lights-on scenes:** "the lights switch on, they do not fade the scene" → got a clean snap.
 - Wan 3.0 renders take 4–10 min; poll `jobs_wait` and give the user a one-line status every few polls.
+- **Watermarks on reference photos:** crop them off before uploading (e.g. the bottom 4.5%) so the model can't copy them.
+- **Too-wide framing from the model:** crop in for free on the 2K frame (~70% crop, scale back up) and upload that file.
+  2K has plenty of detail left for a 720p clip.
+- **Product boxes:** the model copies his box's feature strip (icons + gibberish small print). Ask for "only the scene and
+  the wordmark, no icons, no small print" up front; touching it up afterward works too (2 credits).
 - Lighting drifts between frames (sky too bright). Pass the approved deep-dusk frame as the look reference each time.
+
+## Hook-only jobs (from "pinkhook")
+- The user may want only the hook. Trim the original to the hook first (`ffmpeg -t <hook end>`), then run breakdown on that
+  file. Split a single continuous shot at its whip pan into 2 parts: the blur hides the join, and part 2's start
+  frame = part 1's approved end frame (free).
+- Silent hook: set `project.json` `audio` to null, so `assemble` makes a video with no sound track. Drop the SRT and audio
+  files from the zip, and include the joined full hook in it.
+- The budget the user names (e.g. 30–40 credits) is a hard ceiling. Pinkhook came in at 18.5.
 
 ## Environment
 - Cloud environment "eeee" allows `upload.higgsfield.ai`, `d2ol7oe51mr4n9.cloudfront.net`, `d8j0ntlcm91z4.cloudfront.net`
