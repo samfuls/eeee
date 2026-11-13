@@ -482,7 +482,7 @@ def main():
 
     b = sp.add_parser("breakdown", help="split the original into scenes")
     b.add_argument("name"); b.add_argument("video")
-    b.add_argument("--title"); b.add_argument("--model", default="Wan 3.0 Prime")
+    b.add_argument("--title"); b.add_argument("--model", default="Wan 3.0")
     b.add_argument("--threshold", type=float, default=0.3, help="scene-change sensitivity (lower = more cuts)")
     b.add_argument("--min-len", type=float, default=0.4, help="ignore cuts closer than this (s)")
     b.add_argument("--cuts", help="manual cut times, e.g. 2.0,3.5,6.1 (overrides detection)")
