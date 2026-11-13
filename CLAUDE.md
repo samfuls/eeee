@@ -19,7 +19,13 @@ rules (prompts, product rules, credit costs).
      Save the result: `remake.py set <name> NN --start-frame <file> --status "frames ready"`. Wait for the user's OK.
    - END frame: same method, with image 1 = HIS end frame and image 2 = OUR approved start. Wait for an OK.
    - `remake.py colormatch --project <name> --scene NN` (free; fixes the warm AI look).
-   - Clip: Higgsfield `generate_video` (kling3_0 pro, start_image + end_image, sound off).
+   - Clip: Higgsfield `generate_video` with model `wan3_0_prime` (Wan 3.0 Prime), roles `start_image` + `end_image`,
+     aspect 9:16, 1080p, `generate_audio: false` (it defaults to ON), `enable_thinking: true`.
+     Duration must be a whole number of seconds (min 2): use his scene length rounded UP plus 1s of headroom,
+     so beatmatch has room to pick the in-point and speed.
+     `start_image` can't be combined with reference images or videos. To pin the product, put it in the frames, not in refs.
+     Prompt: one continuous shot, the camera behaving like his, his beats in order, then the reel-copy-method closes
+     (no text or overlays, ultra-realistic iPhone UGC, nothing that reads as AI).
      Quote the cost and wait for a go. Save it with `--raw-clip <file> --status "clip ready"`.
    - Beat match: `remake.py beatmatch <name> NN --his-beat X --our-beat Y`, or `--in/--speed`.
      Our clip now has his exact length.
