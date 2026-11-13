@@ -19,8 +19,8 @@ rules (prompts, product rules), but **the user's preferences below override it**
 - **Frames:** `nano_banana_pro`, **2K**, 9:16, `use_unlim: false`, 2 credits each.
   Unlimited generations don't work from Claude Code (Higgsfield refuses), so credits are the plan.
   The job status says "nano_banana_2"; that's just the internal name and the price is the Pro price.
-- **Clips:** regular **Wan 3.0** (`wan3_0`), not Prime, unless the user says otherwise. 3.5 credits/s at 1080p
-  (2s = 7, 3s = 10.5, 4s = 14). Prime is 6/s. Always `generate_audio: false`, `enable_thinking: true`.
+- **Clips:** regular **Wan 3.0** (`wan3_0`) at **720p**, never Prime (user's standing order).
+  1.75 credits/s (2s = 3.5, 3s = 5.25, 4s = 7). Always `resolution: "720p"`, `generate_audio: false`, `enable_thinking: true`.
 - **No text in any generation.** The caption goes in CapCut as an editable subtitle: set it with
   `remake.py set <name> --caption "..."`, and `assemble` writes `capcut/captions.srt`.
 - **Keep the original's sound** (`his/audio.m4a`). Mention once that a track with music can get muted.
@@ -28,8 +28,8 @@ rules (prompts, product rules), but **the user's preferences below override it**
   look is meant to differ from his (e.g. night vs his daytime), since it would undo it.
 - **Final deliverables**, all sent with `SendUserFile` (`display: attach` for the files):
   - a side-by-side (his | ours) with sound;
-  - `final_preview.mp4` at **1080×1920**: set the project to `width 1080, height 1920` and re-run every beatmatch
-    before assembling, because breakdown defaults to his resolution (often 720p);
+  - `final_preview.mp4` at **720×1280** (clips are 720p now, so upscaling adds nothing; keep his resolution
+    if his is 720p, otherwise set the project to `width 720, height 1280` and re-run every beatmatch before assembling);
   - `<Name>_CapCut.zip` of the `capcut/` folder;
   - the audio on its own as `.m4a` and `.mp3`.
   You can't operate CapCut from the cloud, so say so and give the 4 import steps.
