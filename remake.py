@@ -416,11 +416,15 @@ def build_board(d, p):
     {media(o['start_frame'], 'img', 'Start frame')}{media(o['end_frame'], 'img', 'End frame')}{media(o['clip'] or o['raw_clip'], 'video', 'Clip')}</div>
   {f'<ul class="att">{attempts}</ul>' if attempts else ''}
 </section>""")
+    theme = {"bg": "#17161a", "card": "#211f25", "line": "#322f37", "fg": "#ece9ee",
+             "mut": "#a29da8", "acc": "#f5b400", "ours": "#ff7eb6"}
+    theme.update(p.get("theme") or {})  # optional per-project look, e.g. a gamer board
+    root_vars = ";".join(f"--{k}:{v}" for k, v in theme.items())
     page = f"""<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>{esc(p['title'])} Scene Board</title><style>
 /* editing-suite board: one committed dark look */
-:root{{--bg:#17161a;--card:#211f25;--line:#322f37;--fg:#ece9ee;--mut:#a29da8;--acc:#f5b400;--ours:#ff7eb6;color-scheme:dark}}
+:root{{{root_vars};color-scheme:dark}}
 *{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}}
 main{{max-width:1100px;margin:0 auto;padding-block:24px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
 .plan{{margin:0 0 8px;color:var(--ours)}}.plan b{{color:var(--ours)}}
@@ -444,7 +448,7 @@ figcaption{{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:v
 button{{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}}
 @media(max-width:640px){{.top{{grid-template-columns:1fr}}.row{{grid-template-columns:repeat(3,1fr)}}.side{{grid-column:1/-1}}}}
 </style></head><body><main>
-<div class="kicker">{esc(p['title'])} · competitor copy, scene by scene</div>
+<div class="kicker">{esc(p['title'])} · {esc(p.get("kicker") or "competitor copy, scene by scene")}</div>
 <h1>{esc(p['title'])} Scene Board</h1>
 <div class="top"><div>
   <div class="meta"><span>Brand <b>{esc(p.get('brand') or 'TBD')}</b></span><span>Scenes <b>{done}/{n}</b> cut</span>
