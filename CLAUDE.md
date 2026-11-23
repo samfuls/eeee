@@ -7,6 +7,9 @@ rules (prompts, product rules), but **the user's preferences below override it**
 
 ## User preferences (from the first remake, "pinktent")
 - **Talk style:** short and direct. Before every paid step, show what's being made, the prompt, and the exact cost.
+- **Batch frames (from "weinerpods"):** once the plan is approved, generate ALL start frames in one batch, then ALL end
+  frames in one batch (each end uses our approved start), then all clips. Don't go scene by scene.
+  The user may hand over control ("go automatically if it looks good, redo anything weird"): then skip per-step gos.
 - **Ask before each part.** Start frame, end frame and clip are separate gos. A redo also needs a go.
   "go", "fix", "redo", "touch up" and obvious typos like "Gp" count as a go for the thing just pitched.
   Locking a scene and starting the next scene's start frame can share one go.
