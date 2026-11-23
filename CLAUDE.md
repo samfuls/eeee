@@ -79,6 +79,12 @@ rules (prompts, product rules), but **the user's preferences below override it**
   2K has plenty of detail left for a 720p clip.
 - **Product boxes:** the model copies his box's feature strip (icons + gibberish small print). Ask for "only the scene and
   the wordmark, no icons, no small print" up front; touching it up afterward works too (2 credits).
+- **Style refs leak (weinerhorse):** a whole scene frame passed as a style ref gets copied in (a cashier showed up in the car,
+  his horse came back). For a product style, crop just the product from our approved frame (free) and upload that.
+- **Product swaps (weinerpods):** copy HIS product's build (horse/snake bud shape and size) and swap only the animal + colors.
+  Inventing a new design gave "pasted-on" results. Look the user wanted: cute cartoony glossy 3D toy, not realistic, not flat.
+- **Timeouts:** a generate call that times out may still have been submitted. Check `show_generations` (only_completed=false)
+  a little later before resubmitting, or you pay twice.
 - Lighting drifts between frames (sky too bright). Pass the approved deep-dusk frame as the look reference each time.
 
 ## Hook-only jobs (from "pinkhook")
